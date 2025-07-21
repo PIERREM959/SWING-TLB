@@ -8,7 +8,7 @@ from email.mime.text import MIMEText
 
 # === CONFIG ===
 SYMBOLS = ['BTC-USD', 'ETH-USD', 'AAPL', 'MSFT']
-T = '5m'
+T = '15m'
 MAIL_FROM = 'tonadresse@gmail.com'          # <-- Mets ton adresse gmail ici
 MAIL_TO = 'destinataire@gmail.com'          # <-- Mets l'adresse de destination
 MAIL_PASS = 'MOT_DE_PASSE_APPLICATION'      # <-- Mets ici le mot de passe d'application Gmail
@@ -114,4 +114,4 @@ if __name__ == "__main__":
         print("=== Analyse des signaux... ===")
         analyse_and_alert()
         print("Attente de 1 heure...\n")
-        time.sleep(300)  # 3600 secondes = 1 heure
+        time.sleep(900)  # 3600 secondes = 1 heure
