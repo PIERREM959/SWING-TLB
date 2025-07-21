@@ -1,3 +1,5 @@
+from rich.console import Console
+from rich.table import Table
 import yfinance as yf
 import pandas as pd
 import time
@@ -43,16 +45,63 @@ def send_email(subject, body, mail_from=MAIL_FROM, mail_to=MAIL_TO, mail_pass=MA
     with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
         server.login(mail_from, mail_pass)
         server.send_message(msg)
-
 def analyse_and_alert():
     found_signal = False
     body = ""
+    results = []
+
     for symbol in SYMBOLS:
         closes = get_last_closes(symbol, T, 6)
         signal = check_signals(closes)
+        results.append({
+            'Actif': symbol,
+            'Signal': signal,
+            'C0': closes[::-1][0] if len(closes) == 6 else None,
+            'C1': closes[::-1][1] if len(closes) == 6 else None,
+            'C2': closes[::-1][2] if len(closes) == 6 else None,
+            'C3': closes[::-1][3] if len(closes) == 6 else None,
+            'C4': closes[::-1][4] if len(closes) == 6 else None,
+            'C5': closes[::-1][5] if len(closes) == 6 else None,
+        })
+
         if signal in ["AAAAAAAAAA", "VVVVVVVVVV"]:
             found_signal = True
             body += f"{symbol} : {signal}\n"
+
+    # === AFFICHAGE BEAU ET COLORÉ AVEC RICH ===
+    console = Console()
+    table = Table(title="Tableau des signaux multi-actifs")
+    table.add_column("Actif", justify="center", style="bold cyan")
+    table.add_column("Signal", justify="center")
+    table.add_column("C0", justify="right")
+    table.add_column("C1", justify="right")
+    table.add_column("C2", justify="right")
+    table.add_column("C3", justify="right")
+    table.add_column("C4", justify="right")
+    table.add_column("C5", justify="right")
+
+    for row in results:
+        signal = row['Signal']
+        if signal == "AAAAAAAAAA":
+            color = "bold green"
+        elif signal == "VVVVVVVVVV":
+            color = "bold red"
+        elif signal == "Données manquantes":
+            color = "yellow"
+        else:
+            color = "white"
+        values = []
+        for c in [row['C0'], row['C1'], row['C2'], row['C3'], row['C4'], row['C5']]:
+            try:
+                v = float(c)
+                values.append(f"{v:.2f}")
+            except Exception:
+                values.append("--")
+        table.add_row(row['Actif'], f"[{color}]{signal}[/{color}]", *values)
+
+    console.print(table)
+    # === FIN AFFICHAGE COLORÉ ===
+
     if found_signal:
         subject = "ALERTE TRADING BOT : Signal détecté"
         send_email(subject, body)
