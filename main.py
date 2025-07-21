@@ -12,7 +12,8 @@ MAIL_TO = 'destinataire@gmail.com'          # <-- Mets l'adresse de destination
 MAIL_PASS = 'MOT_DE_PASSE_APPLICATION'      # <-- Mets ici le mot de passe d'application Gmail
 
 def get_last_closes(symbol, timeframe, n=6):
-    df = yf.download(symbol, period=f'{n+5}d', interval=timeframe, progress=False)
+    df = yf.download(symbol, period=f'{n+5}d', interval=timeframe, progress=False, auto_adjust=False)
+
     closes = df['Close'].dropna().values
     if len(closes) < 6:
         closes = [float('nan')] * (6 - len(closes)) + list(closes)
