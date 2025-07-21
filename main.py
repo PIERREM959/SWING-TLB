@@ -1,51 +1,69 @@
+import os
+import time
+from datetime import datetime, timedelta
+import pandas as pd
+import numpy as np
+import yfinance as yf
 from rich.console import Console
 from rich.table import Table
-import os
-import yfinance as yf
-import pandas as pd
-import time
 import smtplib
 from email.mime.text import MIMEText
 
-# === CONFIG ===
-SYMBOLS = ['BTC-USD', 'ETH-USD', 'AAPL', 'MSFT']
-T = '1h'
-MAIL_FROM = os.getenv('MAIL_FROM')  # <-- Variable d'environnement sur Render
-MAIL_TO = os.getenv('MAIL_TO')      # <-- Variable d'environnement sur Render
-MAIL_PASS = os.getenv('MAIL_PASS')  # <-- Variable d'environnement sur Render
+# Liste des actifs à surveiller
+SYMBOLS = [
+    'BTC-USD', 'ETH-USD', 'AAPL', 'MSFT'
+    # Ajoute/enlève ce que tu veux !
+]
+
+T = '1h'  # Unité de temps des bougies ('1h', '1d', etc.)
+
+# Variables d'environnement (plus de valeur en dur dans le code)
+MAIL_FROM = os.getenv('MAIL_FROM')
+MAIL_TO = os.getenv('MAIL_TO')
+MAIL_PASS = os.getenv('MAIL_PASS')
+
+console = Console()
 
 def get_last_closes(symbol, timeframe, n=6):
-    df = yf.download(symbol, period=f'{n+5}d', interval=timeframe, progress=False, auto_adjust=False)
-
-    closes = df['Close'].dropna().values
-    if len(closes) < 6:
-        closes = [float('nan')] * (6 - len(closes)) + list(closes)
-    return closes[-6:]
+    try:
+        df = yf.download(symbol, period=f'{n+5}d', interval=timeframe, progress=False, auto_adjust=False)
+        closes = df['Close'].dropna().values
+        if len(closes) < 6:
+            closes = [float('nan')] * (6 - len(closes)) + list(closes)
+        return closes[-6:]
+    except Exception as e:
+        print(f"[{symbol}]: Erreur yfinance : {e}")
+        return [float('nan')]*6
 
 def check_signals(closes):
-    if len(closes) < 6 or any(pd.isna(c) for c in closes):
+    # On tolère les valeurs NaN (manque de données)
+    if any([pd.isna(c) for c in closes]):
         return "Données manquantes"
-    C0, C1, C2, C3, C4, C5 = closes[::-1]
-    if (C2 > C3 and C2 > C4 and C2 > C5) and \
-       (C1 < C2 and C1 < C3 and C1 < C4) and \
-       (C0 > C1 and C0 > C2 and C0 > C3):
-        return "A" * 10
-    elif (C2 < C3 and C2 < C4 and C2 < C5) and \
-         (C1 > C2 and C1 > C3 and C1 > C4) and \
-         (C0 < C1 and C0 < C2 and C0 < C3):
-        return "V" * 10
+    C0, C1, C2, C3, C4, C5 = closes[::-1]  # C0 = la plus récente
+    if (C2 > C3 and C2 > C4 and C2 > C5 and
+        C1 < C2 and C1 < C3 and C1 < C4 and
+        C0 > C1 and C0 > C2 and C0 > C3):
+        return "AAAAAAAAAA"
+    elif (C2 < C3 and C2 < C4 and C2 < C5 and
+          C1 > C2 and C1 > C3 and C1 > C4 and
+          C0 < C1 and C0 < C2 and C0 < C3):
+        return "VVVVVVVVVV"
     else:
         return "Pas de signal"
 
-def send_email(subject, body, mail_from=MAIL_FROM, mail_to=MAIL_TO, mail_pass=MAIL_PASS):
-    msg = MIMEText(body)
-    msg['Subject'] = subject
-    msg['From'] = mail_from
-    msg['To'] = mail_to
+def send_email(subject, body):
+    try:
+        msg = MIMEText(body)
+        msg['Subject'] = subject
+        msg['From'] = MAIL_FROM
+        msg['To'] = MAIL_TO
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+            server.login(MAIL_FROM, MAIL_PASS)
+            server.sendmail(MAIL_FROM, MAIL_TO, msg.as_string())
+        print(f"Email envoyé : {subject}")
+    except Exception as e:
+        print(f"Erreur lors de l'envoi d'email : {e}")
 
-    with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-        server.login(mail_from, mail_pass)
-        server.send_message(msg)
 def analyse_and_alert():
     found_signal = False
     body = ""
@@ -64,13 +82,11 @@ def analyse_and_alert():
             'C4': closes[::-1][4] if len(closes) == 6 else None,
             'C5': closes[::-1][5] if len(closes) == 6 else None,
         })
-
         if signal in ["AAAAAAAAAA", "VVVVVVVVVV"]:
             found_signal = True
             body += f"{symbol} : {signal}\n"
 
     # === AFFICHAGE BEAU ET COLORÉ AVEC RICH ===
-    console = Console()
     table = Table(title="Tableau des signaux multi-actifs")
     table.add_column("Actif", justify="center", style="bold cyan")
     table.add_column("Signal", justify="center")
@@ -92,19 +108,16 @@ def analyse_and_alert():
         else:
             color = "white"
         values = []
-        import numpy as np
-
-for c in [row['C0'], row['C1'], row['C2'], row['C3'], row['C4'], row['C5']]:
-    try:
-        # Si c'est un array numpy, on prend le premier élément
-        if isinstance(c, np.ndarray):
-            v = float(c[0])
-        else:
-            v = float(c)
-        values.append(f"{v:.2f}")
-    except Exception:
-        values.append("--")
-
+        for c in [row['C0'], row['C1'], row['C2'], row['C3'], row['C4'], row['C5']]:
+            try:
+                # Patch pour warning numpy : extraire la valeur si array
+                if isinstance(c, np.ndarray):
+                    v = float(c[0])
+                else:
+                    v = float(c)
+                values.append(f"{v:.2f}")
+            except Exception:
+                values.append("--")
         table.add_row(row['Actif'], f"[{color}]{signal}[/{color}]", *values)
 
     console.print(table)
@@ -117,9 +130,16 @@ for c in [row['C0'], row['C1'], row['C2'], row['C3'], row['C4'], row['C5']]:
     else:
         print("Aucun signal d'achat ou de vente. (Pas d'email envoyé)")
 
+def wait_until_next_hour():
+    now = datetime.utcnow()
+    next_hour = (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+    sleep_seconds = (next_hour - now).total_seconds()
+    print(f"Attente de {int(sleep_seconds)} secondes jusqu'à la prochaine heure pleine (UTC)...")
+    time.sleep(sleep_seconds)
+
 if __name__ == "__main__":
     while True:
-        print("=== Analyse des signaux... ===")
+        print("\n=== Analyse des signaux... ===")
         analyse_and_alert()
-        print("Attente de 1 heure...\n")
-        time.sleep(3600)  # 3600 secondes = 1 heure
+        wait_until_next_hour()
+
