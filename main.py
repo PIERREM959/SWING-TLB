@@ -114,4 +114,4 @@ if __name__ == "__main__":
         print("=== Analyse des signaux... ===")
         analyse_and_alert()
         print("Attente de 1 heure...\n")
-        time.sleep(3600)  # 3600 secondes = 1 heure
+        time.sleep(60)  # 3600 secondes = 1 heure
