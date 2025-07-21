@@ -92,12 +92,19 @@ def analyse_and_alert():
         else:
             color = "white"
         values = []
-        for c in [row['C0'], row['C1'], row['C2'], row['C3'], row['C4'], row['C5']]:
-            try:
-                v = float(c)
-                values.append(f"{v:.2f}")
-            except Exception:
-                values.append("--")
+        import numpy as np
+
+for c in [row['C0'], row['C1'], row['C2'], row['C3'], row['C4'], row['C5']]:
+    try:
+        # Si c'est un array numpy, on prend le premier élément
+        if isinstance(c, np.ndarray):
+            v = float(c[0])
+        else:
+            v = float(c)
+        values.append(f"{v:.2f}")
+    except Exception:
+        values.append("--")
+
         table.add_row(row['Actif'], f"[{color}]{signal}[/{color}]", *values)
 
     console.print(table)
