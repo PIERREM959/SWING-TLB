@@ -1,5 +1,6 @@
 from rich.console import Console
 from rich.table import Table
+import os
 import yfinance as yf
 import pandas as pd
 import time
