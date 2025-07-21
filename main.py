@@ -8,7 +8,7 @@ from email.mime.text import MIMEText
 
 # === CONFIG ===
 SYMBOLS = ['BTC-USD', 'ETH-USD', 'AAPL', 'MSFT']
-T = '1h'
+T = '1m'
 MAIL_FROM = 'tonadresse@gmail.com'          # <-- Mets ton adresse gmail ici
 MAIL_TO = 'destinataire@gmail.com'          # <-- Mets l'adresse de destination
 MAIL_PASS = 'MOT_DE_PASSE_APPLICATION'      # <-- Mets ici le mot de passe d'application Gmail
