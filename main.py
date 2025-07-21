@@ -9,9 +9,9 @@ from email.mime.text import MIMEText
 # === CONFIG ===
 SYMBOLS = ['BTC-USD', 'ETH-USD', 'AAPL', 'MSFT']
 T = '1h'
-MAIL_FROM = 'tonadresse@gmail.com'          # pierrem959@gmail.com
-MAIL_TO = 'destinataire@gmail.com'          # pierrem959@gmail.com
-MAIL_PASS = 'MOT_DE_PASSE_APPLICATION'      # xerpozfnqzggodyq
+MAIL_FROM = os.getenv('MAIL_FROM')  # <-- Variable d'environnement sur Render
+MAIL_TO = os.getenv('MAIL_TO')      # <-- Variable d'environnement sur Render
+MAIL_PASS = os.getenv('MAIL_PASS')  # <-- Variable d'environnement sur Render
 
 def get_last_closes(symbol, timeframe, n=6):
     df = yf.download(symbol, period=f'{n+5}d', interval=timeframe, progress=False, auto_adjust=False)
