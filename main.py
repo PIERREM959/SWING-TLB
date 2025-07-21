@@ -11,7 +11,7 @@ SYMBOLS = ['BTC-USD', 'ETH-USD', 'AAPL', 'MSFT']
 T = '1h'
 MAIL_FROM = 'tonadresse@gmail.com'          # pierrem959@gmail.com
 MAIL_TO = 'destinataire@gmail.com'          # pierrem959@gmail.com
-MAIL_PASS = 'MOT_DE_PASSE_APPLICATION'      # xerp ozfn qzgg odyq
+MAIL_PASS = 'MOT_DE_PASSE_APPLICATION'      # xerpozfnqzggodyq
 
 def get_last_closes(symbol, timeframe, n=6):
     df = yf.download(symbol, period=f'{n+5}d', interval=timeframe, progress=False, auto_adjust=False)
