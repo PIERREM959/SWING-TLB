@@ -11,7 +11,7 @@ from email.mime.text import MIMEText
 
 # Liste des actifs à surveiller
 SYMBOLS = [
-    'XRP-USD'
+    'IXIC '
     # Ajoute/enlève ce que tu veux !
 ]
 
