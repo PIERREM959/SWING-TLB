@@ -11,7 +11,7 @@ from email.mime.text import MIMEText
 
 # Liste des actifs à surveiller
 SYMBOLS = [
-    'BTC-USD', 'ETH-USD', 'AAPL', 'MSFT'
+    'XRP-USD'
     # Ajoute/enlève ce que tu veux !
 ]
 
