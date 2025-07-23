@@ -40,7 +40,7 @@ def check_signals(closes):
     if any([pd.isna(c) for c in closes]):
         return "Données manquantes"
     C0, C1, C2, C3, C4, C5 = closes[::-1]  # C0 = la plus récente
-    if (C0 < C1 and C0 < C2 and C0<> C3):
+    if (C0 < C1 and C0 < C2 and C0 < C3):
         return "AAAAAAAAAA"
     elif (C0 > C1 and C0 > C2 and C0 > C3):
         return "VVVVVVVVVV"
