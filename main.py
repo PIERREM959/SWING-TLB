@@ -11,7 +11,7 @@ from email.mime.text import MIMEText
 
 # Liste des actifs à surveiller
 SYMBOLS = [
-    'IXIC ','GDAXI','RUT','FTSE','EURUSD=X','AUDUSD=X','EURJPY=X','GBPUSD=X','BTC-USD','ETH-USD','XRP-USD','SOL-USD'
+    'IXIC ','GDAXI','RUT','FTSE','EURUSD=X','JPY=X','AUDUSD=X','EURJPY=X','GBPUSD=X','BTC-USD','ETH-USD','XRP-USD','SOL-USD'
     # Ajoute/enlève ce que tu veux !
 ]
 
