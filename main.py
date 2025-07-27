@@ -11,11 +11,11 @@ from email.mime.text import MIMEText
 
 # Liste des actifs à surveiller
 SYMBOLS = [
-    'IXIC ','GDAXI','RUT','FTSE','EURUSD=X','JPY=X','AUDUSD=X','EURJPY=X','GBPUSD=X','BTC-USD','ETH-USD','XRP-USD','SOL-USD'
+    'GDAXI'
     # Ajoute/enlève ce que tu veux !
 ]
 
-T = '1h'  # Unité de temps des bougies ('1h', '1d', etc.)
+T = '1d'  # Unité de temps des bougies ('1h', '1d', etc.)
 
 # Variables d'environnement (plus de valeur en dur dans le code)
 MAIL_FROM = os.getenv('MAIL_FROM')
@@ -40,9 +40,9 @@ def check_signals(closes):
     if any([pd.isna(c) for c in closes]):
         return "Données manquantes"
     C0, C1, C2, C3, C4, C5 = closes[::-1]  # C0 = la plus récente
-    if (C0 < C1 and C0 < C2 and C0 < C3):
+    if (C0 > C1 and C1 < C2 and C2 > C3):
         return "AAAAAAAAAA"
-    elif (C0 > C1 and C0 > C2 and C0 > C3):
+    elif (C0 < C1 and C1 > C2 and C2 < C3):
         return "VVVVVVVVVV"
     else:
         return "Pas de signal"
