@@ -1,6 +1,7 @@
 import os
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
+import pytz
 import pandas as pd
 import yfinance as yf
 from rich.console import Console
@@ -8,39 +9,39 @@ from rich.table import Table
 import smtplib
 from email.mime.text import MIMEText
 
-# === Configuration ===
-SYMBOLS = ['^GDAXI']  # DAX 40 sur Yahoo Finance
-T = '1h'  # Intervalle des bougies
-TRAILING_STOP_PCT = 0.01  # 1% trailing stop
+# === Config ===
+SYMBOLS = ['^GDAXI']
+T = '1h'
+TRAILING_STOP_PCT = 0.01  # 1%
+START_HOUR = 9    # Heure d'ouverture
+END_HOUR = 17.5   # Heure de fermeture (17h30)
+TIMEZONE = pytz.timezone("Europe/Paris")
 
-# Variables d'environnement pour Render
 MAIL_FROM = os.getenv('MAIL_FROM')
 MAIL_TO = os.getenv('MAIL_TO')
 MAIL_PASS = os.getenv('MAIL_PASS')
 
 console = Console()
 
-# === Variables de trading ===
+# Variables de position
 open_position = False
 entry_price = None
 stop_price = None
 
 
 def get_last_closes(symbol, timeframe):
-    """Récupère les deux dernières clôtures (C0, C1)."""
     try:
         df = yf.download(symbol, period='3d', interval=timeframe, progress=False, auto_adjust=False)
         closes = df['Close'].dropna().values
         if len(closes) < 2:
             return None, None
-        return closes[-1], closes[-2]  # C0 (dernier), C1 (précédent)
+        return closes[-1], closes[-2]
     except Exception as e:
         print(f"[{symbol}] Erreur yfinance : {e}")
         return None, None
 
 
 def send_email(subject, body):
-    """Envoie un e-mail via Gmail SMTP."""
     try:
         msg = MIMEText(body)
         msg['Subject'] = subject
@@ -55,7 +56,6 @@ def send_email(subject, body):
 
 
 def analyse_and_trade():
-    """Analyse les signaux et gère l'achat/vente avec trailing stop."""
     global open_position, entry_price, stop_price
 
     table = Table(title="Signaux & Positions")
@@ -64,13 +64,12 @@ def analyse_and_trade():
     for symbol in SYMBOLS:
         C0, C1 = get_last_closes(symbol, T)
         if not C0 or not C1:
-            table.add_row("Données manquantes pour " + symbol)
+            table.add_row("Données manquantes")
             continue
 
         message = ""
 
         if not open_position:
-            # Achat si C0 > C1
             if C0 > C1:
                 open_position = True
                 entry_price = C0
@@ -78,16 +77,13 @@ def analyse_and_trade():
                 message = f"ACHAT DAX à {entry_price:.2f} points"
                 send_email("ALERTE TRADING BOT", message)
         else:
-            # Si position ouverte
             if C0 <= stop_price:
-                # Vente si stop atteint
-                message = f"VENTE DAX à {C0:.2f} points"
+                message = f"VENTE DAX à {C0:.2f} points (Stop atteint)"
                 send_email("ALERTE TRADING BOT", message)
                 open_position = False
                 entry_price = None
                 stop_price = None
             else:
-                # Ajuste le trailing stop si le prix monte
                 if C0 > entry_price:
                     stop_price = max(stop_price, C0 * (1 - TRAILING_STOP_PCT))
                 message = f"Position ouverte - Prix: {C0:.2f}, Stop: {stop_price:.2f}"
@@ -98,17 +94,39 @@ def analyse_and_trade():
     console.print(table)
 
 
+def close_position_if_market_closed(C0):
+    global open_position, entry_price, stop_price
+
+    if open_position:
+        message = f"VENTE AUTO 17h30 DAX à {C0:.2f} points"
+        send_email("ALERTE TRADING BOT", message)
+        open_position = False
+        entry_price = None
+        stop_price = None
+        console.print(f"[bold red]{message}[/bold red]")
+
+
 def wait_until_next_hour():
-    """Attend jusqu'à l'heure UTC suivante."""
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
     next_hour = (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
-    sleep_seconds = (next_hour - now).total_seconds()
-    print(f"Attente {int(sleep_seconds)} sec jusqu'à la prochaine heure pleine (UTC)...")
-    time.sleep(sleep_seconds)
+    time.sleep((next_hour - now).total_seconds())
 
 
 if __name__ == "__main__":
     while True:
-        print("\n=== Analyse des signaux... ===")
-        analyse_and_trade()
+        now_paris = datetime.now(TIMEZONE)
+        current_hour = now_paris.hour + now_paris.minute / 60
+
+        if START_HOUR <= current_hour <= END_HOUR:
+            print(f"\n=== {now_paris.strftime('%H:%M')} - Analyse des signaux... ===")
+            analyse_and_trade()
+        else:
+            print(f"{now_paris.strftime('%H:%M')} - Hors heures de trading (standby)...")
+
+            # Si marché fermé et position ouverte, fermeture auto à 17h30
+            if open_position and current_hour > END_HOUR:
+                C0, _ = get_last_closes(SYMBOLS[0], T)
+                if C0:
+                    close_position_if_market_closed(C0)
+
         wait_until_next_hour()
